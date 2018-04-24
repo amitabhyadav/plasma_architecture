@@ -1,0 +1,13 @@
+v1.07  - Update uart unit, baseline performance numbers in documentation, custom benchmark, compiler related
+v1.06  - Update baseline performance numbers in documentation
+v1.05  - Modify opcodes makefile and move make.exe in the source folder
+       - Update "How to report results" documentation section with details about the analysis
+       - Update doc with TUD VPN via browser
+v1.04  - Instructions to re-generate srec file for opcodes
+v1.03  - Update and place missing cygwin dll's in compiler/ folder
+v1.02  - Update timing constraints to have a clean Timing Analysis report
+       - Update doc: Timing analysis, benchmark numbers and bench_all
+       - Remove delay_200us component
+v1.01  - Update doc with board documentation
+       - Change platform frequency & UART baudrate
+v1.0   - Initial release

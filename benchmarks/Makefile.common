@@ -1,0 +1,83 @@
+
+ENDIAN  = big
+
+# Entry point address for the text segment
+# JPEG, SUSAN and SSD benchmarks have an offset of 512KB
+ifeq (,$(findstring full_,$(IMG_FILE)))
+    ENTRY=0x10000000
+else 
+	ENTRY=0x10080000	
+endif
+
+MIPS_PATH  = /home/pdp/toolchain-ctng/mips-pdp-elf/bin/mips-pdp-elf-
+
+SREC_DIR     = /home/pdp/pdp/sim/ddr_content
+CUST_LIBDIR  = /home/pdp/pdp/benchmarks/libs/lib
+LINKLIB      = /home/pdp/pdp/benchmarks/libs/lib/libOS.a
+CUST_INCDIR  = /home/pdp/pdp/benchmarks/libs/include
+
+CC      = $(MIPS_PATH)gcc
+OBJDUMP = $(MIPS_PATH)objdump
+OBJCOPY = $(MIPS_PATH)objcopy
+
+CFLAGS  += -mno-abicalls -fno-pic -c -g -Wall -O4 -I $(CUST_INCDIR)
+
+LDFLAGS += -Wl,-N -Wl,-T../elf32ebmip.xc -Wl,--section-start,.text.entry=$(ENTRY)
+LDFLAGS += -L ../syscalls -L $(CUST_LIBDIR)
+LDLIBS  += -lc -lOS -lgmp -lc -lm
+
+# --------- Benchmarks
+
+%.o: %.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+%.o: %.cpp
+	$(CPP) $(CFLAGS) -o $@ $<
+
+%.lst: %.o
+	$(OBJDUMP) -d $< > $@
+
+$(PROG).o : $(PROG).c
+	$(CC) $(CFLAGS) -DCUSTOM_MAIN -o $@ $<
+
+$(PROG): $(OBJS) $(LINKLIB) $(PROG).o 
+	$(CC) $(LDFLAGS) $(OBJS) $(PROG).o $(LDLIBS) -o $@
+	@$(OBJDUMP) -M -no-aliases -d $@ > $@.lst
+
+%.axf: %
+	$(OBJCOPY) -I elf32-$(ENDIAN)mips -g -O elf32-$(ENDIAN)mips $^ $@
+
+%.bin: %.axf
+	$(OBJCOPY) -I elf32-$(ENDIAN)mips -S --strip-unneeded -O binary $^ $@
+
+%.srec: %.bin
+	$(OBJCOPY) -I binary -O srec $^ $(SREC_DIR)/$@
+
+full_$(PROG).bin: $(PROG).bin
+	cat ../ramdisk.img $(PROG).bin > full_$(PROG).bin
+
+image_all: $(IMG_FILE)
+
+image: $(IMG_FILE) $(PROG).lst $(PROG).srec
+	rm -f $(PROG).axf $(PROG).o
+
+images:
+	cd ../pi; make clean image
+	cd ../fir; make clean image
+	cd ../multiply; make clean image
+	cd ../divide; make clean image
+	cd ../rsa; make clean image
+	cd ../jpeg; make clean image
+	cd ../ssearch; make clean image
+	cd ../susan; make clean image
+	cd ../ssd; make clean image
+#	cd ../custom; make clean image
+
+
+# --------- Emulator
+test_sim: $(IMG_FILE)
+	../../tools/mlite.exe $(IMG_FILE) B
+# ---------
+
+clean:
+	rm -f $(PROG) $(PROG).bin full_$(PROG).bin $(PROG).lst *.o  
